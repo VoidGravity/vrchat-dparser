@@ -19,6 +19,24 @@ import os
 import glob
 from collections import defaultdict
 
+# Try to import python-dotenv, fall back to defaults if not available
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    print("Warning: python-dotenv not found. Using default configuration.")
+
+
+def load_config():
+    """Load configuration from environment variables with fallback defaults."""
+    config = {
+        'DATA_LOCATION': os.getenv('DATA_LOCATION', 'data'),
+        'MIN_OCCURRENCES': int(os.getenv('MIN_OCCURRENCES', '7')),
+        'MIN_MARKETING_SPEND': float(os.getenv('MIN_MARKETING_SPEND', '15')),
+        'HEAT_POPULARITY_FACTOR': float(os.getenv('HEAT_POPULARITY_FACTOR', '1.0'))
+    }
+    return config
+
 
 def load_json_files(data_dir):
     """Generator that yields world data from all JSON files in the data directory."""
@@ -86,36 +104,22 @@ def format_bio_description(bio):
     return bio_str if bio_str else "NA"
 
 
-def calculate_factor(value, min_val=0, max_val=100):
+def calculate_business_metrics(avg_occupants, heat_popularity_factor):
     """
-    Calculate factor from heat or popularity value.
-    Converts value to a factor ranging from 1.0 to 1.5.
-    Higher values = higher factors (closer to 1.5).
-    """
-    if value <= min_val:
-        return 1.0
-    if value >= max_val:
-        return 1.5
-    # Linear interpolation between 1.0 and 1.5
-    return 1.0 + (0.5 * (value - min_val) / (max_val - min_val))
-
-
-def calculate_business_metrics(avg_occupants, heat, popularity):
-    """
-    Calculate business analytics metrics.
+    Calculate business analytics metrics using simplified factor system.
+    
+    Args:
+        avg_occupants: Average number of occupants
+        heat_popularity_factor: Configurable multiplier factor
     
     Returns:
         tuple: (estimated_orders, max_marketing_spend)
     """
-    # Calculate factors (assuming max values for normalization)
-    heat_factor = calculate_factor(heat, 0, 100)
-    popularity_factor = calculate_factor(popularity, 0, 100)
+    # Simplified calculation: daily_visitors = avg_occupants × HEAT_POPULARITY_FACTOR
+    daily_visitors = avg_occupants * heat_popularity_factor
     
-    # Average the heat factor and popularity factor for combined factor
-    combined_factor = (heat_factor + popularity_factor) / 2
-    
-    # Order estimation formula: (avg_occupants × combined_factor × 30) / 10000
-    estimated_orders = (avg_occupants * combined_factor * 30) / 10000
+    # Order estimation formula: (daily_visitors × 30) / 10000
+    estimated_orders = (daily_visitors * 30) / 10000
     
     # Maximum marketing spend formula: orders × 400 × 0.35
     max_marketing_spend = estimated_orders * 400 * 0.35
@@ -231,10 +235,14 @@ def aggregate_world_data(data_dir):
     return world_data
 
 
-def calculate_averages_and_sort(world_data):
+def calculate_averages_and_sort(world_data, config):
     """
     Calculate average occupants for each world and return sorted list.
-    Only includes worlds with 7 or more total occurrences.
+    Filters worlds based on occurrences and marketing spend thresholds.
+    
+    Args:
+        world_data: Dictionary of world data
+        config: Configuration dictionary with MIN_OCCURRENCES, MIN_MARKETING_SPEND, etc.
     
     Returns:
         list: List of tuples (world_id, world_info) sorted by average occupants (descending)
@@ -242,7 +250,7 @@ def calculate_averages_and_sort(world_data):
     world_list = []
     
     for world_id, info in world_data.items():
-        if info['occurrences'] >= 7:  # Filter for 7+ occurrences
+        if info['occurrences'] >= config['MIN_OCCURRENCES']:
             average_occupants = info['occupants_sum'] / info['occurrences']
             info['average_occupants'] = round(average_occupants, 2)
             
@@ -250,14 +258,16 @@ def calculate_averages_and_sort(world_data):
             if info['min_occupants'] == float('inf'):
                 info['min_occupants'] = 0
             
-            # Calculate business metrics
+            # Calculate business metrics using simplified system
             estimated_orders, max_marketing_spend = calculate_business_metrics(
-                average_occupants, info['heat'], info['popularity']
+                average_occupants, config['HEAT_POPULARITY_FACTOR']
             )
             info['estimated_orders'] = estimated_orders
             info['max_marketing_spend'] = max_marketing_spend
             
-            world_list.append((world_id, info))
+            # Filter by marketing spend threshold
+            if max_marketing_spend >= config['MIN_MARKETING_SPEND']:
+                world_list.append((world_id, info))
     
     # Sort by average occupants (highest first)
     world_list.sort(key=lambda x: x[1]['average_occupants'], reverse=True)
@@ -265,7 +275,7 @@ def calculate_averages_and_sort(world_data):
     return world_list
 
 
-def write_csv_output(world_list, output_file):
+def write_csv_output(world_list, output_file, config):
     """Write the aggregated world data to a CSV file."""
     headers = [
         'world_name',
@@ -311,15 +321,24 @@ def write_csv_output(world_list, output_file):
     
     print(f"Results written to {output_file}")
     print(f"Total worlds processed: {len(world_list)}")
-    print(f"Worlds filtered for 7+ occurrences: {len(world_list)}")
+    print(f"Worlds filtered for {config['MIN_OCCURRENCES']}+ occurrences and ${config['MIN_MARKETING_SPEND']}+ marketing spend: {len(world_list)}")
 
 
 def main():
     """Main function to run the world data aggregation."""
-    data_dir = "data"
+    # Load configuration from environment variables
+    config = load_config()
+    
+    data_dir = config['DATA_LOCATION']
     output_file = "worlds_aggregated.csv"
     
     print("VRChat Analytics Processor Script")
+    print("=====================================")
+    print(f"Configuration:")
+    print(f"  Data Location: {config['DATA_LOCATION']}")
+    print(f"  Min Occurrences: {config['MIN_OCCURRENCES']}")
+    print(f"  Min Marketing Spend: ${config['MIN_MARKETING_SPEND']}")
+    print(f"  Heat/Popularity Factor: {config['HEAT_POPULARITY_FACTOR']}")
     print("=====================================")
     
     # Check if data directory exists
@@ -336,11 +355,11 @@ def main():
         print("No world data found to process")
         return 1
     
-    # Calculate averages and sort
-    world_list = calculate_averages_and_sort(world_data)
+    # Calculate averages and sort with configuration
+    world_list = calculate_averages_and_sort(world_data, config)
     
     # Write output CSV
-    write_csv_output(world_list, output_file)
+    write_csv_output(world_list, output_file, config)
     
     print("\nTop 5 worlds by average occupants:")
     for i, (world_id, info) in enumerate(world_list[:5], 1):

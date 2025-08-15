@@ -7,13 +7,27 @@ A Python tool for processing and aggregating VRChat world data from JSON files w
 - Processes multiple JSON files containing VRChat world data
 - Aggregates statistics for each world across all files
 - Calculates average occupants and occurrence counts
-- Advanced filtering (7+ occurrences minimum for final output)
-- Business analytics with order estimation and marketing spend calculations
+- Environment-based configuration system with .env support
+- Configurable filtering thresholds (occurrences and marketing spend)
+- Simplified business analytics with configurable factor calculation
 - Enhanced bio/social links extraction with proper formatting
 - Heat and popularity value tracking
 - Min/max occupant tracking across all data files
 - Outputs results as CSV sorted by average occupants
-- Handles large datasets efficiently using Python standard library only
+- Handles large datasets efficiently using Python standard library
+
+## Installation
+
+1. Install the required dependency:
+```bash
+pip install python-dotenv
+```
+
+2. Set up your environment configuration:
+```bash
+cp .env.example .env
+# Edit .env with your preferred settings
+```
 
 ## Usage
 
@@ -84,7 +98,9 @@ The CSV output includes 15 columns in this order:
 14. `bio_description`: Author's bio description (formatted)
 15. `social_links`: Author's social media links (semicolon-separated)
 
-**Filtering**: Only worlds with 7 or more total occurrences across all files are included in the final output.
+**Filtering**: Only worlds meeting both criteria are included in output:
+- Minimum occurrences (configurable, default: 7+)  
+- Minimum marketing spend (configurable, default: $15+)
 
 **Missing Data**: Fields use "NA" when bio or bioLinks are missing/empty.
 
@@ -92,22 +108,22 @@ The output is sorted by average occupants in descending order.
 
 ## Business Analytics
 
-### Factor Calculation System
+### Simplified Factor Calculation System
 
-The script implements a factor calculation system that converts heat and popularity values to factors ranging from 1.0 to 1.5:
+The script uses a configurable multiplier system for business calculations:
 
-- **Factor Range**: 1.0 (minimum) to 1.5 (maximum)
-- **Higher Values**: Higher heat/popularity values result in higher factors (closer to 1.5)
-- **Combined Factor**: The heat factor and popularity factor are averaged for a combined factor
+- **Daily Visitors Formula**: `daily_visitors = avg_occupants × HEAT_POPULARITY_FACTOR`
+- **Factor Range**: Configurable (default 1.0)
+- **Simple Configuration**: Single environment variable controls the multiplier
 
 ### Business Formulas
 
 #### Order Estimation Formula
 ```
-orders = (avg_occupants × combined_factor × 30) / 10000
+orders = (daily_visitors × 30) / 10000
 ```
 
-**Explanation**: The formula estimates monthly orders based on the principle that 10,000 monthly visitors typically generate one order. Since occupants come and go, the heat and popularity values help determine how much the average occurrence can be trusted as an indicator of traffic.
+**Explanation**: The formula estimates monthly orders based on the principle that 10,000 monthly visitors typically generate one order. The configurable factor allows adjustment based on actual data analysis.
 
 #### Maximum Marketing Spend Formula
 ```
@@ -116,6 +132,12 @@ max_marketing_spend = orders × 400 × 0.35
 
 **Explanation**: The maximum marketing spend should not exceed 35% of revenue, assuming $400 revenue per order. This ensures profitable marketing campaigns while maintaining healthy margins.
 
+### Filtering
+
+The system applies two filters:
+1. **Minimum Occurrences**: Only worlds appearing in at least `MIN_OCCURRENCES` files (default: 7)
+2. **Minimum Marketing Spend**: Only worlds with marketing spend ≥ `MIN_MARKETING_SPEND` (default: $15)
+
 ### Financial Calculations
 
 All financial calculations are rounded to 2 decimal places for practical business use.
@@ -123,4 +145,33 @@ All financial calculations are rounded to 2 decimal places for practical busines
 ## Requirements
 
 - Python 3.6+
-- No external dependencies (uses only Python standard library)
+- python-dotenv (for environment configuration)
+
+## Environment Configuration
+
+The script supports environment-based configuration through a `.env` file. Copy `.env.example` to `.env` and customize the values:
+
+```bash
+cp .env.example .env
+```
+
+### Configuration Options
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATA_LOCATION` | `data` | Directory containing JSON files to process |
+| `MIN_OCCURRENCES` | `7` | Minimum occurrences required for a world to be included in output |
+| `MIN_MARKETING_SPEND` | `15` | Minimum marketing spend threshold (worlds below this are excluded) |
+| `HEAT_POPULARITY_FACTOR` | `1.0` | Multiplier for daily visitors calculation |
+
+### Factor Calculation System
+
+The script uses a simplified factor calculation system:
+
+- **Daily Visitors**: `daily_visitors = avg_occupants × HEAT_POPULARITY_FACTOR`  
+- **Order Estimation**: `orders = (daily_visitors × 30) ÷ 10,000`
+- **Marketing Spend**: `max_marketing_spend = orders × 400 × 0.35`
+
+**Default Factor**: 1.0 means daily_visitors equals avg_occupants. This can be adjusted based on actual heat/popularity analysis when real multipliers are determined from data analysis.
+
+**Future Enhancement**: Heat and popularity values (range 1-10) can be mapped to specific multipliers once sufficient data analysis determines the correlation between these values and actual traffic patterns.
