@@ -4,6 +4,9 @@ worlds_aggregated.csv
 # Test data (users should add their own data files)
 data/
 
+# Environment configuration (users should create their own .env)
+.env
+
 # Python cache
 __pycache__/
 *.pyc
