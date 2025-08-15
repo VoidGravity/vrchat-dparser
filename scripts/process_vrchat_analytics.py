@@ -209,14 +209,36 @@ def aggregate_world_data(data_dir):
         
         # Updated logic for bioLinks - check if we haven't found valid data yet
         if world_info['bioLinks'] is None:
+            # Try to get bioLinks from different locations
+            bio_links = None
+            
+            # First try direct world fields
             bio_links = safe_get(world, 'bioLinks') or safe_get(world, 'bio_links')
+            
+            # If not found, try author nested object
+            if not bio_links:
+                author = safe_get(world, 'author')
+                if author:
+                    bio_links = safe_get(author, 'bioLinks') or safe_get(author, 'bio_links')
+            
             formatted_links = format_bioLinks(bio_links)
             if formatted_links is not None:  # Only update if we have actual data
                 world_info['bioLinks'] = formatted_links
         
         # Updated logic for bio - check if we haven't found valid data yet  
         if world_info['bio'] is None:
+            # Try to get bio from different locations
+            bio = None
+            
+            # First try direct world fields
             bio = safe_get(world, 'bio') or safe_get(world, 'description')
+            
+            # If not found, try author nested object
+            if not bio:
+                author = safe_get(world, 'author')
+                if author:
+                    bio = safe_get(author, 'bio') or safe_get(author, 'description')
+            
             formatted_bio = format_bio(bio)
             if formatted_bio is not None:  # Only update if we have actual data
                 world_info['bio'] = formatted_bio
