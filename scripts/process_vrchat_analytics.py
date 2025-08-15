@@ -81,7 +81,7 @@ def safe_get(data, key, default=""):
     return data.get(key, default) if isinstance(data, dict) else default
 
 
-def format_social_links(bio_links):
+def format_bioLinks(bio_links):
     """Format social links into a string representation."""
     if not bio_links:
         return "NA"
@@ -96,7 +96,7 @@ def format_social_links(bio_links):
         return link_str if link_str else "NA"
 
 
-def format_bio_description(bio):
+def format_bio(bio):
     """Format bio description with proper handling of missing values."""
     if not bio:
         return "NA"
@@ -147,8 +147,8 @@ def aggregate_world_data(data_dir):
         'image_url': '',
         'author_id': '',
         'author_name': '',
-        'social_links': '',
-        'bio_description': '',
+        'bioLinks': '',
+        'bio': '',
         'heat': 0,
         'popularity': 0
     })
@@ -206,13 +206,13 @@ def aggregate_world_data(data_dir):
         if not world_info['author_name']:
             world_info['author_name'] = safe_get(world, 'authorName') or safe_get(world, 'author_name')
         
-        if not world_info['social_links']:
+        if not world_info['bioLinks']:
             bio_links = safe_get(world, 'bioLinks') or safe_get(world, 'bio_links')
-            world_info['social_links'] = format_social_links(bio_links)
+            world_info['bioLinks'] = format_bioLinks(bio_links)
         
-        if not world_info['bio_description']:
-            bio = safe_get(world, 'bio') or safe_get(world, 'description') or safe_get(world, 'bio_description')
-            world_info['bio_description'] = format_bio_description(bio)
+        if not world_info['bio']:
+            bio = safe_get(world, 'bio') or safe_get(world, 'description') or safe_get(world, 'bio')
+            world_info['bio'] = format_bio(bio)
         
         # Extract heat and popularity (use first occurrence values)
         if world_info['heat'] == 0:
@@ -291,8 +291,8 @@ def write_csv_output(world_list, output_file, config):
         'image_url',
         'user_id',
         'user_name',
-        'bio_description',
-        'social_links'
+        'bio',
+        'bioLinks'
     ]
     
     with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
@@ -314,8 +314,8 @@ def write_csv_output(world_list, output_file, config):
                 info['image_url'] if info['image_url'] else "NA",
                 info['author_id'] if info['author_id'] else "NA",
                 info['author_name'] if info['author_name'] else "NA",
-                info['bio_description'],
-                info['social_links']
+                info['bio'],
+                info['bioLinks']
             ]
             writer.writerow(row)
     
