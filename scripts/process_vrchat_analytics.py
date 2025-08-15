@@ -84,24 +84,25 @@ def safe_get(data, key, default=""):
 def format_bioLinks(bio_links):
     """Format social links into a string representation."""
     if not bio_links:
-        return "NA"
+        return None
     
     if isinstance(bio_links, list):
         if not bio_links:  # Empty list
-            return "NA"
+            return None
         # Join multiple links with semicolon
-        return ";".join(str(link) for link in bio_links if link)
+        valid_links = [str(link).strip() for link in bio_links if link and str(link).strip()]
+        return ";".join(valid_links) if valid_links else None
     else:
         link_str = str(bio_links).strip()
-        return link_str if link_str else "NA"
+        return link_str if link_str else None
 
 
 def format_bio(bio):
     """Format bio description with proper handling of missing values."""
     if not bio:
-        return "NA"
+        return None
     bio_str = str(bio).strip()
-    return bio_str if bio_str else "NA"
+    return bio_str if bio_str else None
 
 
 def calculate_business_metrics(avg_occupants, heat_popularity_factor):
@@ -147,8 +148,8 @@ def aggregate_world_data(data_dir):
         'image_url': '',
         'author_id': '',
         'author_name': '',
-        'bioLinks': '',
-        'bio': '',
+        'bioLinks': None,  # Changed to None
+        'bio': None,       # Changed to None
         'heat': 0,
         'popularity': 0
     })
@@ -206,16 +207,18 @@ def aggregate_world_data(data_dir):
         if not world_info['author_name']:
             world_info['author_name'] = safe_get(world, 'authorName') or safe_get(world, 'author_name')
         
-        if not world_info['bioLinks'] or world_info['bioLinks'] == 'NA':
+        # Updated logic for bioLinks - check if we haven't found valid data yet
+        if world_info['bioLinks'] is None:
             bio_links = safe_get(world, 'bioLinks') or safe_get(world, 'bio_links')
             formatted_links = format_bioLinks(bio_links)
-            if formatted_links != 'NA':
+            if formatted_links is not None:  # Only update if we have actual data
                 world_info['bioLinks'] = formatted_links
         
-        if not world_info['bio'] or world_info['bio'] == 'NA':
+        # Updated logic for bio - check if we haven't found valid data yet  
+        if world_info['bio'] is None:
             bio = safe_get(world, 'bio') or safe_get(world, 'description')
             formatted_bio = format_bio(bio)
-            if formatted_bio != 'NA':
+            if formatted_bio is not None:  # Only update if we have actual data
                 world_info['bio'] = formatted_bio
         
         # Extract heat and popularity (use first occurrence values)
@@ -318,8 +321,8 @@ def write_csv_output(world_list, output_file, config):
                 info['image_url'] if info['image_url'] else "NA",
                 info['author_id'] if info['author_id'] else "NA",
                 info['author_name'] if info['author_name'] else "NA",
-                info['bio'],
-                info['bioLinks']
+                info['bio'] if info['bio'] is not None else "NA",       # Updated
+                info['bioLinks'] if info['bioLinks'] is not None else "NA"  # Updated
             ]
             writer.writerow(row)
     
