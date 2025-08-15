@@ -206,13 +206,17 @@ def aggregate_world_data(data_dir):
         if not world_info['author_name']:
             world_info['author_name'] = safe_get(world, 'authorName') or safe_get(world, 'author_name')
         
-        if not world_info['bioLinks']:
+        if not world_info['bioLinks'] or world_info['bioLinks'] == 'NA':
             bio_links = safe_get(world, 'bioLinks') or safe_get(world, 'bio_links')
-            world_info['bioLinks'] = format_bioLinks(bio_links)
+            formatted_links = format_bioLinks(bio_links)
+            if formatted_links != 'NA':
+                world_info['bioLinks'] = formatted_links
         
-        if not world_info['bio']:
-            bio = safe_get(world, 'bio') or safe_get(world, 'description') or safe_get(world, 'bio')
-            world_info['bio'] = format_bio(bio)
+        if not world_info['bio'] or world_info['bio'] == 'NA':
+            bio = safe_get(world, 'bio') or safe_get(world, 'description')
+            formatted_bio = format_bio(bio)
+            if formatted_bio != 'NA':
+                world_info['bio'] = formatted_bio
         
         # Extract heat and popularity (use first occurrence values)
         if world_info['heat'] == 0:
