@@ -32,7 +32,7 @@ Environment variables via `.env` file (copy from `.env.example`):
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATA_LOCATION` | `data` | Directory containing JSON files to process |
+| `DATA_LOCATION` | `../data` | Directory containing JSON files to process |
 | `MIN_OCCURRENCES` | `7` | Minimum occurrences required for a world to be included in output |
 | `MIN_MARKETING_SPEND` | `15` | Minimum marketing spend threshold (worlds below this are excluded) |
 | `HEAT_POPULARITY_FACTOR` | `1.0` | Multiplier for daily visitors calculation |
