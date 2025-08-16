@@ -1,10 +1,10 @@
 # vrchat-dparser
 
-A Python tool for processing and aggregating VRChat world data from JSON files with advanced filtering, business analytics, and enhanced data extraction.
+A Python tool for processing and aggregating VRChat world data from JSON files with advanced filtering, business analytics, and production email service.
 
 ## Features
 
-- Processes multiple JSON files containing VRChat world data
+- Memory-optimized processing of VRChat world data from JSON files
 - Aggregates statistics for each world across all files
 - Calculates average occupants and occurrence counts
 - Environment-based configuration system with .env support
@@ -14,7 +14,9 @@ A Python tool for processing and aggregating VRChat world data from JSON files w
 - Heat and popularity value tracking
 - Min/max occupant tracking across all data files
 - Outputs results as CSV sorted by average occupants
-- Handles large datasets efficiently using Python standard library
+- Production email service with 24-hour scheduling
+- PROD email formatting and memory-efficient reporting
+- Handles large datasets efficiently with optimized memory usage
 
 ## Installation
 
@@ -26,12 +28,50 @@ pip install python-dotenv
 2. Set up your environment configuration:
 ```bash
 cp .env.example .env
-# Edit .env with your preferred settings
+# Edit .env with your preferred settings and email configuration
 ```
 
 ## Usage
 
 ### World Data Aggregation
+
+Run the analytics processor to aggregate VRChat world data:
+
+```bash
+python scripts/process_vrchat_analytics.py
+```
+
+This will:
+1. Read all JSON files from the configured data directory
+2. Aggregate world statistics (memory-optimized processing)
+3. Apply filtering based on occurrence and marketing spend thresholds
+4. Generate `worlds_aggregated.csv` with the results
+
+### Email Service
+
+Send analytics reports via email (24-hour interval):
+
+```bash
+python scripts/email_service.py
+```
+
+The email service:
+- Only sends emails after 24 hours have passed since the last email
+- Includes "PROD" prefix in subject lines (e.g., "PROD Daily Analytics - 2025-08-16")
+- Attaches the CSV file with full analytics data
+- Provides concise email summary to avoid memory issues
+
+### Production Service
+
+Run both analytics processing and email service together:
+
+```bash
+# Normal operation (respects 24-hour email interval)
+python scripts/production_service.py
+
+# Force send email for testing
+python scripts/production_service.py --force-email
+```
 
 The main script `scripts/process_vrchat_analytics.py` processes JSON files in the `data/` directory and generates an aggregated CSV report with advanced analytics.
 
@@ -163,6 +203,19 @@ cp .env.example .env
 | `MIN_OCCURRENCES` | `7` | Minimum occurrences required for a world to be included in output |
 | `MIN_MARKETING_SPEND` | `15` | Minimum marketing spend threshold (worlds below this are excluded) |
 | `HEAT_POPULARITY_FACTOR` | `1.0` | Multiplier for daily visitors calculation |
+
+### Email Service Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SMTP_SERVER` | `smtp.gmail.com` | SMTP server for sending emails |
+| `SMTP_PORT` | `587` | SMTP port |
+| `EMAIL_USERNAME` | `` | Email account username |
+| `EMAIL_PASSWORD` | `` | Email account password (use app password for Gmail) |
+| `FROM_EMAIL` | `` | Sender email address |
+| `TO_EMAIL` | `` | Recipient email address |
+| `ANALYTICS_FILE` | `worlds_aggregated.csv` | Analytics file to attach to emails |
+| `EMAIL_INTERVAL_HOURS` | `24` | Hours between email sends |
 
 ### Factor Calculation System
 
