@@ -1,6 +1,9 @@
 # Output files
 worlds_aggregated.csv
 
+# Email service files
+.last_email_sent
+
 # Test data (users should add their own data files)
 data/
 

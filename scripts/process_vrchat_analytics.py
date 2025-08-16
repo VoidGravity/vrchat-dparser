@@ -134,7 +134,7 @@ def calculate_business_metrics(avg_occupants, heat_popularity_factor):
 
 def aggregate_world_data(data_dir):
     """
-    Aggregate world data from all JSON files.
+    Memory-optimized aggregation of world data from JSON files.
     
     Returns:
         dict: Dictionary with world_id as key and aggregated data as value
@@ -148,8 +148,8 @@ def aggregate_world_data(data_dir):
         'image_url': '',
         'author_id': '',
         'author_name': '',
-        'bioLinks': None,  # Changed to None
-        'bio': None,       # Changed to None
+        'bioLinks': None,
+        'bio': None,
         'heat': 0,
         'popularity': 0
     })
@@ -343,14 +343,13 @@ def write_csv_output(world_list, output_file, config):
                 info['image_url'] if info['image_url'] else "NA",
                 info['author_id'] if info['author_id'] else "NA",
                 info['author_name'] if info['author_name'] else "NA",
-                info['bio'] if info['bio'] is not None else "NA",       # Updated
-                info['bioLinks'] if info['bioLinks'] is not None else "NA"  # Updated
+                info['bio'] if info['bio'] is not None else "NA",
+                info['bioLinks'] if info['bioLinks'] is not None else "NA"
             ]
             writer.writerow(row)
     
-    print(f"Results written to {output_file}")
-    print(f"Total worlds processed: {len(world_list)}")
-    print(f"Worlds filtered for {config['MIN_OCCURRENCES']}+ occurrences and ${config['MIN_MARKETING_SPEND']}+ marketing spend: {len(world_list)}")
+    # Simplified output - removed memory-intensive summary statistics
+    print(f"Results written to {output_file} ({len(world_list)} worlds)")
 
 
 def main():
@@ -390,10 +389,9 @@ def main():
     # Write output CSV
     write_csv_output(world_list, output_file, config)
     
-    print("\nTop 5 worlds by average occupants:")
-    for i, (world_id, info) in enumerate(world_list[:5], 1):
-        world_name = info['name'] or world_id
-        print(f"{i}. {world_name}: {info['average_occupants']} avg occupants ({info['occurrences']} occurrences)")
+    # Removed memory-intensive summary statistics as requested
+    # Only show essential completion message
+    print(f"\nProcessing completed successfully. Results saved to {output_file}")
     
     return 0
 
