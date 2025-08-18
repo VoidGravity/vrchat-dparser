@@ -202,10 +202,30 @@ def aggregate_world_data(data_dir):
             world_info['image_url'] = safe_get(world, 'imageUrl') or safe_get(world, 'image_url')
         
         if not world_info['author_id']:
-            world_info['author_id'] = safe_get(world, 'authorId') or safe_get(world, 'author_id')
+            # Try to get author_id from different locations
+            author_id = safe_get(world, 'authorId') or safe_get(world, 'author_id')
+            
+            # If not found, try author nested object
+            if not author_id:
+                author = safe_get(world, 'author')
+                if author:
+                    author_id = safe_get(author, 'authorId') or safe_get(author, 'author_id')
+            
+            if author_id:
+                world_info['author_id'] = author_id
         
         if not world_info['author_name']:
-            world_info['author_name'] = safe_get(world, 'authorName') or safe_get(world, 'author_name')
+            # Try to get author_name from different locations
+            author_name = safe_get(world, 'authorName') or safe_get(world, 'author_name')
+            
+            # If not found, try author nested object
+            if not author_name:
+                author = safe_get(world, 'author')
+                if author:
+                    author_name = safe_get(author, 'authorName') or safe_get(author, 'author_name')
+            
+            if author_name:
+                world_info['author_name'] = author_name
         
         # Updated logic for bioLinks - check if we haven't found valid data yet
         if world_info['bioLinks'] is None:
