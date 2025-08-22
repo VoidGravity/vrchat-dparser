@@ -65,10 +65,18 @@ def load_json_data(data_dir):
                     
                 # Extract users if present and add to lookup
                 if isinstance(data, dict) and 'users' in data:
-                    for user in data['users']:
-                        user_id = safe_get(user, 'id')
-                        if user_id:
-                            users_lookup[user_id] = user
+                    users_data = data['users']
+                    if isinstance(users_data, list):
+                        # Handle array format (old structure)
+                        for user in users_data:
+                            user_id = safe_get(user, 'id')
+                            if user_id:
+                                users_lookup[user_id] = user
+                    elif isinstance(users_data, dict):
+                        # Handle object format (new structure) where keys are user IDs
+                        for user_id, user in users_data.items():
+                            if user_id:
+                                users_lookup[user_id] = user
                 
                 # Handle different possible JSON structures for worlds
                 if isinstance(data, list):
