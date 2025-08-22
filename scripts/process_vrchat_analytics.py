@@ -38,42 +38,67 @@ def load_config():
     return config
 
 
-def load_json_files(data_dir):
-    """Generator that yields world data from all JSON files in the data directory."""
+def load_json_data(data_dir):
+    """
+    Load JSON data from all files and extract worlds and users.
+    
+    Returns:
+        tuple: (generator of world objects, dict of users by ID)
+    """
     json_pattern = os.path.join(data_dir, "*.json")
     json_files = glob.glob(json_pattern)
     
     if not json_files:
         print(f"Warning: No JSON files found in {data_dir}")
-        return
+        return [], {}
     
     print(f"Found {len(json_files)} JSON files to process")
     
-    for file_path in json_files:
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+    # Collect users from all files
+    users_lookup = {}
+    
+    def world_generator():
+        for file_path in json_files:
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    
+                # Extract users if present and add to lookup
+                if isinstance(data, dict) and 'users' in data:
+                    for user in data['users']:
+                        user_id = safe_get(user, 'id')
+                        if user_id:
+                            users_lookup[user_id] = user
                 
-            # Handle different possible JSON structures
-            if isinstance(data, list):
-                # If the file contains a list of worlds directly
-                for world in data:
-                    yield world
-            elif isinstance(data, dict):
-                # If the file contains an object with a 'worlds' key
-                if 'worlds' in data:
-                    for world in data['worlds']:
+                # Handle different possible JSON structures for worlds
+                if isinstance(data, list):
+                    # If the file contains a list of worlds directly
+                    for world in data:
                         yield world
+                elif isinstance(data, dict):
+                    # If the file contains an object with a 'worlds' key
+                    if 'worlds' in data:
+                        for world in data['worlds']:
+                            yield world
+                    elif 'users' not in data:
+                        # If the file contains a single world object (and no users key)
+                        yield data
                 else:
-                    # If the file contains a single world object
-                    yield data
-            else:
-                print(f"Warning: Unexpected data structure in {file_path}")
-                
-        except json.JSONDecodeError as e:
-            print(f"Error parsing JSON file {file_path}: {e}")
-        except Exception as e:
-            print(f"Error processing file {file_path}: {e}")
+                    print(f"Warning: Unexpected data structure in {file_path}")
+                    
+            except json.JSONDecodeError as e:
+                print(f"Error parsing JSON file {file_path}: {e}")
+            except Exception as e:
+                print(f"Error processing file {file_path}: {e}")
+    
+    return world_generator(), users_lookup
+
+
+def load_json_files(data_dir):
+    """Generator that yields world data from all JSON files in the data directory."""
+    # Keep backward compatibility - this function still works as before
+    worlds_gen, _ = load_json_data(data_dir)
+    return worlds_gen
 
 
 def safe_get(data, key, default=""):
@@ -134,7 +159,7 @@ def calculate_business_metrics(avg_occupants, heat_popularity_factor):
 
 def aggregate_world_data(data_dir):
     """
-    Memory-optimized aggregation of world data from JSON files.
+    Memory-optimized aggregation of world data from JSON files with dynamic user lookup.
     
     Returns:
         dict: Dictionary with world_id as key and aggregated data as value
@@ -156,7 +181,10 @@ def aggregate_world_data(data_dir):
     
     world_count = 0
     
-    for world in load_json_files(data_dir):
+    # Load both worlds and users data
+    worlds_generator, users_lookup = load_json_data(data_dir)
+    
+    for world in worlds_generator:
         world_id = safe_get(world, 'id')
         if not world_id:
             # Try alternative field names
@@ -224,10 +252,15 @@ def aggregate_world_data(data_dir):
                 if author:
                     author_name = safe_get(author, 'authorName') or safe_get(author, 'author_name')
             
+            # If still not found, try separate user lookup by authorId
+            if not author_name and world_info['author_id'] and world_info['author_id'] in users_lookup:
+                user_data = users_lookup[world_info['author_id']]
+                author_name = safe_get(user_data, 'displayName') or safe_get(user_data, 'authorName') or safe_get(user_data, 'author_name')
+            
             if author_name:
                 world_info['author_name'] = author_name
         
-        # Updated logic for bioLinks - check if we haven't found valid data yet
+        # Enhanced logic for bioLinks - check if we haven't found valid data yet
         if world_info['bioLinks'] is None:
             # Try to get bioLinks from different locations
             bio_links = None
@@ -241,11 +274,16 @@ def aggregate_world_data(data_dir):
                 if author:
                     bio_links = safe_get(author, 'bioLinks') or safe_get(author, 'bio_links')
             
+            # If still not found, try separate user lookup by authorId
+            if not bio_links and world_info['author_id'] and world_info['author_id'] in users_lookup:
+                user_data = users_lookup[world_info['author_id']]
+                bio_links = safe_get(user_data, 'bioLinks') or safe_get(user_data, 'bio_links')
+            
             formatted_links = format_bioLinks(bio_links)
             if formatted_links is not None:  # Only update if we have actual data
                 world_info['bioLinks'] = formatted_links
         
-        # Updated logic for bio - check if we haven't found valid data yet  
+        # Enhanced logic for bio - check if we haven't found valid data yet  
         if world_info['bio'] is None:
             # Try to get bio from different locations
             bio = None
@@ -258,6 +296,11 @@ def aggregate_world_data(data_dir):
                 author = safe_get(world, 'author')
                 if author:
                     bio = safe_get(author, 'bio') or safe_get(author, 'description')
+            
+            # If still not found, try separate user lookup by authorId
+            if not bio and world_info['author_id'] and world_info['author_id'] in users_lookup:
+                user_data = users_lookup[world_info['author_id']]
+                bio = safe_get(user_data, 'bio') or safe_get(user_data, 'description')
             
             formatted_bio = format_bio(bio)
             if formatted_bio is not None:  # Only update if we have actual data
